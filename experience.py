@@ -325,4 +325,4 @@ async def leaveServer(ctx, gid: int, cid: int):
   await ctx.message.add_reaction('✅')
 
 
-bot.run('NDgyNjA4OTMyMTc1NDc4ODA1.DmHYRg.VRjCMVI5-QBz1Em5UVmyyP1Hxas')
+bot.run('TOKEN REEE')
