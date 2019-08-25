@@ -1,2 +1,0 @@
-experience.py
-pause

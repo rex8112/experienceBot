@@ -3,9 +3,11 @@ import sqlite3
 import datetime
 
 from discord.ext import commands
+from configobj import ConfigObj
 
 db = sqlite3.connect('experience.db')
 cursor = db.cursor()
+config = ConfigObj(infile = 'config.ini')
 masterColor = discord.Colour(0x30673a)
 
 bot = commands.Bot(description='True Experience', command_prefix='!')
@@ -20,9 +22,13 @@ async def on_ready():
     print(guild.name)
     print(guild.id)
     print('----------')
-  cursor.execute( """CREATE TABLE IF NOT EXISTS exp( count INTEGER DEFAULT 0 )""")
+  cursor.execute( """CREATE TABLE IF NOT EXISTS EXP( count INTEGER DEFAULT 0 )""")
   cursor.execute( """CREATE TABLE IF NOT EXISTS MENTION(indx INTEGER PRIMARY KEY, name TEXT, id INTEGER, count INTEGER DEFAULT 0)""" )
   cursor.execute( """CREATE TABLE IF NOT EXISTS TIMETABLE(indx INTEGER PRIMARY KEY, name TEXT, id INTEGER, cin TEXT, cout TEXT, active INTEGER)""" )
+  cursor.execute( """SELECT count FROM EXP""" )
+  if not cursor.fetchone():
+    cursor.execute( """INSERT INTO EXP DEFAULT VALUES""" )
+  
   db.commit()
 
 @bot.event
@@ -32,7 +38,7 @@ async def on_message(ctx):
     mentions = ctx.mentions
     if 'experience' in ctx.content.lower():
       await ctx.channel.send('🎉🎊 **CORE ESSENTIAL EXPERIENCE** 🎊🎉')
-      cursor.execute("""UPDATE exp SET count= count + 1""")
+      cursor.execute("""UPDATE EXP SET count= count + 1""")
       db.commit()
 
     for mem in mentions:
@@ -63,13 +69,13 @@ async def on_command_error(ctx, error):
 @commands.guild_only()
 async def core(ctx):
   """State the Core Essential Experience for Necro Nursery"""
-  await ctx.send('🎉🎊 **CORE ESSENTIAL EXPERIENCE** 🎊🎉\nTo save the day by making your way through the kingdom cleaning up the slime stages.')
+  await ctx.send('🎉🎊 **CORE ESSENTIAL EXPERIENCE** 🎊🎉\nI don\'t know')
 
 @bot.command()
 @commands.guild_only()
 async def get(ctx):
   """Get Mention and Experience Count"""
-  cursor.execute("""SELECT count FROM exp""")
+  cursor.execute("""SELECT count FROM EXP""")
   count = cursor.fetchone()
   cursor.execute("""SELECT id, count FROM MENTION ORDER BY count DESC""")
   mcount = cursor.fetchall()
@@ -287,6 +293,12 @@ async def new(ctx, mem: discord.Member, cin: str, cout: str):
   except ValueError:
     await ctx.message.add_reaction('⛔')
     raise commands.UserInputError('Format error: Please Format in "YYYY-MM-DD HH:MM:SS"')
+    
+@edit.command()
+async def remove(ctx, indx: int):
+  cursor.execute("""DELETE FROM TIMETABLE WHERE indx = ?""", (indx))
+  db.commit()
+  await ctx.message.add_reaction('✅')
 
 @bot.command()
 @commands.is_owner()
@@ -325,4 +337,4 @@ async def leaveServer(ctx, gid: int, cid: int):
   await ctx.message.add_reaction('✅')
 
 
-bot.run('TOKEN REEE')
+bot.run(config['token'])
