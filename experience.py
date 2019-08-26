@@ -23,12 +23,14 @@ async def on_ready():
     print(guild.name)
     print(guild.id)
     print('----------')
-  cursor.execute( """CREATE TABLE IF NOT EXISTS EXP( count INTEGER DEFAULT 0 )""")
+  cursor.execute( """CREATE TABLE IF NOT EXISTS SERVERS( indx INTEGER PRIMARY KEY, id INTEGER, exp INTEGER DEFAULT 0, announce INTEGER, core TEXT )""" )
   cursor.execute( """CREATE TABLE IF NOT EXISTS MENTION(indx INTEGER PRIMARY KEY, name TEXT, id INTEGER, count INTEGER DEFAULT 0)""" )
   cursor.execute( """CREATE TABLE IF NOT EXISTS TIMETABLE(indx INTEGER PRIMARY KEY, name TEXT, id INTEGER, cin TEXT, cout TEXT, active INTEGER)""" )
-  cursor.execute( """SELECT count FROM EXP""" )
-  if not cursor.fetchone():
-    cursor.execute( """INSERT INTO EXP DEFAULT VALUES""" )
+  
+  for guild in bot.guilds:
+    cursor.execute( """SELECT * FROM SERVERS WHERE id = ?""", (guild.id,) )
+    if not cursor.fetchone():
+      cursor.execute( """INSERT INTO SERVERS(id) VALUES(?)""", (guild.id,) )
   
   db.commit()
 
@@ -64,19 +66,40 @@ async def on_command_error(ctx, error):
       print('{}: {}'.format(type(error).__name__, error))
       embed = discord.Embed(title="Error", colour=discord.Colour(0xd0021b), description='{}: {}'.format(type(error).__name__, str(error)))
       embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar_url)
-      await ctx.send(embed=embed, delete_after=5.00)
+      embed.set_footer(text='Please message rex8112#1200 if the error is not from user error')
+      await ctx.send(embed=embed)
+      
+@bot.event
+async def on_guild_join(guild):
+  embed = discord.Embed(title='Hello!', colour=masterColor, description='I have a few setup request to run at maximum efficiency. Anyone with Manage Server permission can use these commands.')
+  embed.set_author(name=guild.name, icon_url=guild.icon_url)
+  embed.add_field(name='Announcements', value='By using !setannounce or !sa in a channel, you will set that channel to be where I will post any bot related announcements, including but not limited to new features, scheduled downtimes, or known errors/workarounds. If you don\'t set this, then the server owner will get the announcements in their DMs.', inline=False)
+  embed.add_field(name='Core Essential Experience', value='By using !setcore you can set your game\'s Core Essential Experience, which will be posted when using !core')
+  
+  cursor.execute( """SELECT * FROM SERVERS WHERE id = ?""", (guild.id,) )
+  if not cursor.fetchone():
+    cursor.execute( """INSERT INTO SERVERS(id) VALUES(?)""", (guild.id,) )
+    db.commit()
+  
+  if guild.system_channel:
+    await guild.system_channel.send(embed=embed)
+  else:
+    await guild.owner.send(embed=embed)
 
 @bot.command()
 @commands.guild_only()
 async def core(ctx):
-  """State the Core Essential Experience for Necro Nursery"""
-  await ctx.send('🎉🎊 **CORE ESSENTIAL EXPERIENCE** 🎊🎉\nI don\'t know')
+  """State the Core Essential Experience"""
+  cursor.execute( """SELECT core FROM SERVERS WHERE id = ?""", (ctx.guild.id,) )
+  core = cursor.fetchone()
+  
+  await ctx.send('🎉🎊 **CORE ESSENTIAL EXPERIENCE** 🎊🎉\n{}'.format(core[0]))
 
 @bot.command()
 @commands.guild_only()
-async def get(ctx):
+async def count(ctx):
   """Get Mention and Experience Count"""
-  cursor.execute("""SELECT count FROM EXP""")
+  cursor.execute("""SELECT count FROM SERVERS WHERE id = ?""", (ctx.guild.id,) )
   count = cursor.fetchone()
   cursor.execute("""SELECT id, count FROM MENTION ORDER BY count DESC""")
   mcount = cursor.fetchall()
@@ -89,7 +112,21 @@ async def get(ctx):
       embed.add_field(name='{}'.format(user.display_name), value='**Count:** {}'.format(mem[1]), inline=False)
 
   await ctx.send(embed=embed)
-  #await ctx.send('🎉🎊 **CORE ESSENTIAL EXPERIENCE** 🎊🎉\nCount: *{}*'.format(count[0]))
+  
+@bot.command(aliases=['sa'])
+@commands.has_permissions(manage_channels=True)
+async def setannounce(ctx):
+  announce = ctx.channel.id
+  cursor.execute( """UPDATE SERVERS SET announce = ? WHERE id = ?""", (announce, ctx.guild.id) )
+  db.commit()
+  await ctx.message.add_reaction('✅')
+  
+@bot.command()
+@commands.has_permissions(manage_channels=True)
+async def setcore(ctx, *, core):
+  cursor.execute( """UPDATE SERVERS SET core = ? WHERE id = ?""", (core, ctx.guild.id) )
+  db.commit()
+  await ctx.message.add_reaction('✅')
 
 @bot.command(aliases=['in'])
 @commands.guild_only()
@@ -278,6 +315,10 @@ async def get(ctx, mem: discord.Member):
 @commands.has_permissions(ban_members=True)
 async def edit(ctx):
   """Administrative Edit Commands"""
+  owner = bot.get_user(180067685986467840)
+  embed = discord.Embed(title='Edit Command Invoked', colour=masterColor, description=str(ctx.message.content))
+  embed.set_author(name=str(ctx.author), icon_url=ctx.author.avatar_url)
+  await owner.send(embed=embed)
 
 @edit.command()
 async def new(ctx, mem: discord.Member, cin: str, cout: str):
