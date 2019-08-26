@@ -10,7 +10,8 @@ cursor = db.cursor()
 config = ConfigObj(infile = 'config.ini')
 masterColor = discord.Colour(0x30673a)
 
-bot = commands.Bot(description='True Experience', command_prefix='!')
+game = discord.Activity(name='!help', type=discord.ActivityType.listening)
+bot = commands.Bot(description='True Experience', command_prefix='!', activity=game)
 
 @bot.event
 async def on_ready():
@@ -300,7 +301,7 @@ async def remove(ctx, indx: int):
   db.commit()
   await ctx.message.add_reaction('✅')
 
-@bot.command()
+@bot.command(hidden=True)
 @commands.is_owner()
 async def channelsServer(ctx, gid: int):
   guild = bot.get_guild(gid)
@@ -315,7 +316,7 @@ async def channelsServer(ctx, gid: int):
 
   await ctx.send(embed=embed)
 
-@bot.command()
+@bot.command(hidden=True)
 @commands.is_owner()
 async def leaveServer(ctx, gid: int, cid: int):
   guild = bot.get_guild(gid)
