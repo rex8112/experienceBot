@@ -297,7 +297,7 @@ async def new(ctx, mem: discord.Member, cin: str, cout: str):
     
 @edit.command()
 async def remove(ctx, indx: int):
-  cursor.execute("""DELETE FROM TIMETABLE WHERE indx = ?""", (indx))
+  cursor.execute("""DELETE FROM TIMETABLE WHERE indx = ?""", (indx,))
   db.commit()
   await ctx.message.add_reaction('✅')
 
