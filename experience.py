@@ -71,6 +71,10 @@ async def on_command_error(ctx, error):
       
 @bot.event
 async def on_guild_join(guild):
+  print(guild.name)
+  print(guild.id)
+  print('----------')
+  
   embed = discord.Embed(title='Hello!', colour=masterColor, description='I have a few setup request to run at maximum efficiency. Anyone with Manage Server permission can use these commands.')
   embed.set_author(name=guild.name, icon_url=guild.icon_url)
   embed.add_field(name='Announcements', value='By using !setannounce or !sa in a channel, you will set that channel to be where I will post any bot related announcements, including but not limited to new features, scheduled downtimes, or known errors/workarounds. If you don\'t set this, then the server owner will get the announcements in their DMs.', inline=False)
