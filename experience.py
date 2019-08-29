@@ -41,7 +41,7 @@ async def on_message(ctx):
     mentions = ctx.mentions
     if 'experience' in ctx.content.lower():
       await ctx.channel.send('🎉🎊 **CORE ESSENTIAL EXPERIENCE** 🎊🎉')
-      cursor.execute("""UPDATE EXP SET count= count + 1""")
+      cursor.execute("""UPDATE SERVERS SET exp = exp + 1""")
       db.commit()
 
     for mem in mentions:
