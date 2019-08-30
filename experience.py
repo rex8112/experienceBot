@@ -13,6 +13,15 @@ masterColor = discord.Colour(0x30673a)
 game = discord.Activity(name='!help', type=discord.ActivityType.listening)
 bot = commands.Bot(description='True Experience', command_prefix='!', activity=game)
 
+def ttCheck(ctx, indx):
+  guild = ctx.guild
+  cursor.execute( """SELECT id FROM TIMETABLE WHERE indx = ?""", (indx,) )
+  uid = cursor.fetchone()[0]
+  if guild.get_member(uid):
+    return True
+  else:
+    return False
+
 @bot.event
 async def on_ready():
   print("Logged in as")
@@ -41,7 +50,7 @@ async def on_message(ctx):
     mentions = ctx.mentions
     if 'experience' in ctx.content.lower():
       await ctx.channel.send('🎉🎊 **CORE ESSENTIAL EXPERIENCE** 🎊🎉')
-      cursor.execute("""UPDATE SERVERS SET exp = exp + 1""")
+      cursor.execute("""UPDATE SERVERS SET exp = exp + 1 WHERE id = ?""", (ctx.guild.id,))
       db.commit()
 
     for mem in mentions:
@@ -345,6 +354,26 @@ async def remove(ctx, indx: int):
   cursor.execute("""DELETE FROM TIMETABLE WHERE indx = ?""", (indx,))
   db.commit()
   await ctx.message.add_reaction('✅')
+  
+@edit.command()
+async def update(ctx, indx, pos: str, *, timestamp):
+  if ttCheck(ctx, indx):
+    try:
+      time = datetime.datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S')
+      
+      if pos == 'in':
+        cursor.execute( """UPDATE TIMETABLE SET cin = ? WHERE indx = ?""", (timestamp, indx))
+      elif pos == 'out':
+        cursor.execute( """UPDATE TIMETABLE SET cout = ? WHERE indx = ?""", (timestamp, indx))
+      db.commit()
+      await ctx.message.add_reaction('✅')
+    
+    except ValueError:
+      await ctx.message.add_reaction('⛔')
+      raise commands.UserInputError('Format error: Please Format in "YYYY-MM-DD HH:MM:SS"')
+  else:
+    await ctx.message.add_reaction('⛔')
+    raise commands.UserInputError('Permission error: That entry belongs to another project')
 
 @bot.command(hidden=True)
 @commands.is_owner()
