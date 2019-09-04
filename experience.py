@@ -1,6 +1,7 @@
 ﻿import discord
 import sqlite3
 import datetime
+import sys
 
 from discord.ext import commands
 from configobj import ConfigObj
@@ -12,6 +13,18 @@ masterColor = discord.Colour(0x30673a)
 
 game = discord.Activity(name='!help', type=discord.ActivityType.listening)
 bot = commands.Bot(description='True Experience', command_prefix='!', activity=game)
+
+try: ##Check if config.ini exist, if not, create a new file and kill the program
+  f = open('config.ini')
+  f.close()
+except IOError as e:
+  f = open('config.ini', 'w+')
+  f.close()
+  
+  print('config.ini not found, generating one now.')
+  config['token'] = ''
+  config.write()
+  sys.exit()
 
 def ttCheck(ctx, indx):
   guild = ctx.guild
