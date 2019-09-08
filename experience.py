@@ -259,7 +259,7 @@ async def summary(ctx, begin, end):
         cout = datetime.datetime.strptime(time[1], "%Y-%m-%d %H:%M:%S")
         dur = cout - cin
 
-        min += dur.days * 86400
+        min += dur.days * 1440
         sec += dur.seconds
 
       min += sec // 60
