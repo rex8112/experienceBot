@@ -1,6 +1,7 @@
 ﻿import discord
 import sqlite3
 import datetime
+import sys
 
 from discord.ext import commands
 from configobj import ConfigObj
@@ -12,6 +13,27 @@ masterColor = discord.Colour(0x30673a)
 
 game = discord.Activity(name='!help', type=discord.ActivityType.listening)
 bot = commands.Bot(description='True Experience', command_prefix='!', activity=game)
+
+try: ##Check if config.ini exist, if not, create a new file and kill the program
+  f = open('config.ini')
+  f.close()
+except IOError as e:
+  f = open('config.ini', 'w+')
+  f.close()
+  
+  print('config.ini not found, generating one now.')
+  config['token'] = ''
+  config.write()
+  sys.exit()
+
+def ttCheck(ctx, indx):
+  guild = ctx.guild
+  cursor.execute( """SELECT id FROM TIMETABLE WHERE indx = ?""", (indx,) )
+  uid = cursor.fetchone()[0]
+  if guild.get_member(uid):
+    return True
+  else:
+    return False
 
 @bot.event
 async def on_ready():
@@ -41,7 +63,7 @@ async def on_message(ctx):
     mentions = ctx.mentions
     if 'experience' in ctx.content.lower():
       await ctx.channel.send('🎉🎊 **CORE ESSENTIAL EXPERIENCE** 🎊🎉')
-      cursor.execute("""UPDATE SERVERS SET exp = exp + 1""")
+      cursor.execute("""UPDATE SERVERS SET exp = exp + 1 WHERE id = ?""", (ctx.guild.id,))
       db.commit()
 
     for mem in mentions:
@@ -89,6 +111,23 @@ async def on_guild_join(guild):
     await guild.system_channel.send(embed=embed)
   else:
     await guild.owner.send(embed=embed)
+    
+@bot.command()
+@commands.is_owner()
+async def announcement(ctx, title, message):
+  """Send a bot wide announcement"""
+  embed = discord.Embed(title=title, colour=masterColor, description=message)
+  cursor.execute( """SELECT id, announce FROM SERVERS""" )
+  servers = cursor.fetchall()
+  
+  for server in servers:
+    guild = bot.get_guild(server[0])
+    if server[1]:
+      annCh = guild.get_channel(server[1])
+      await annCh.send(embed=embed)
+    else:
+      gowner = guild.owner
+      await gowner.send(embed=embed)
 
 @bot.command()
 @commands.guild_only()
@@ -240,7 +279,8 @@ async def active(ctx):
 @commands.has_permissions(ban_members=True)
 async def summary(ctx, begin, end):
   """Collect total time between dates for everyone
-    Use date format: YYYY-MM-DD"""
+    Use date format: YYYY-MM-DD
+    This works by checking for all clock in times so it will not grab someone if they clocked in the day before the first date but clocked out on the first date or later"""
   embed = discord.Embed(title='Times Between', colour=masterColor, description='{} - {}'.format(begin, end))
   embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
 
@@ -320,13 +360,19 @@ async def get(ctx, mem: discord.Member):
 async def edit(ctx):
   """Administrative Edit Commands"""
   owner = bot.get_user(180067685986467840)
-  embed = discord.Embed(title='Edit Command Invoked', colour=masterColor, description=str(ctx.message.content))
-  embed.set_author(name=str(ctx.author), icon_url=ctx.author.avatar_url)
-  await owner.send(embed=embed)
+  if ctx.author is not owner:
+    embed = discord.Embed(title='Edit Command Invoked', colour=masterColor, description=str(ctx.message.content))
+    embed.set_author(name=str(ctx.author), icon_url=ctx.author.avatar_url)
+    await owner.send(embed=embed)
 
 @edit.command()
 async def new(ctx, mem: discord.Member, cin: str, cout: str):
-  """Manually add a new TT entry for someone"""
+  """Manually add a new TT entry for someone
+  
+  mem is a member in your Discord
+  cin is the in times
+  cout is the out time
+  You must use the whole format: YYYY-MM-DD HH:MM:SS"""
   id = mem.id
   try:
     tin = datetime.datetime.strptime(cin, '%Y-%m-%d %H:%M:%S')
@@ -342,9 +388,38 @@ async def new(ctx, mem: discord.Member, cin: str, cout: str):
     
 @edit.command()
 async def remove(ctx, indx: int):
+  """Removes an existing entry THERE IS NO UNDO
+  
+  Simply supply the correct indx"""
   cursor.execute("""DELETE FROM TIMETABLE WHERE indx = ?""", (indx,))
   db.commit()
   await ctx.message.add_reaction('✅')
+  
+@edit.command()
+async def update(ctx, indx, pos: str, *, timestamp):
+  """Update an existing entry to change the in or out time
+  
+  indx is the number of the entry
+  pos is either in or out, depending on what you want to change
+  timestamp is the new value
+  You must use the whole format: YYYY-MM-DD HH:MM:SS"""
+  if ttCheck(ctx, indx):
+    try:
+      time = datetime.datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S')
+      
+      if pos == 'in':
+        cursor.execute( """UPDATE TIMETABLE SET cin = ? WHERE indx = ?""", (timestamp, indx))
+      elif pos == 'out':
+        cursor.execute( """UPDATE TIMETABLE SET cout = ? WHERE indx = ?""", (timestamp, indx))
+      db.commit()
+      await ctx.message.add_reaction('✅')
+    
+    except ValueError:
+      await ctx.message.add_reaction('⛔')
+      raise commands.UserInputError('Format error: Please Format in "YYYY-MM-DD HH:MM:SS"')
+  else:
+    await ctx.message.add_reaction('⛔')
+    raise commands.UserInputError('Permission error: That entry belongs to another project')
 
 @bot.command(hidden=True)
 @commands.is_owner()
