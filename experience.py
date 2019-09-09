@@ -24,7 +24,7 @@ except IOError as e:
   sys.exit()
 
 game = discord.Activity(name='!help', type=discord.ActivityType.listening)
-bot = commands.Bot(description='True Experience', command_prefix='!', activity=game, owner_id=config['ownerID'])
+bot = commands.Bot(description='True Experience', command_prefix='!', activity=game, owner_id=int(config['ownerID']))
 
 
 def ttCheck(ctx, indx):
@@ -134,7 +134,7 @@ async def announcement(ctx, title, *, message):
 @commands.guild_only()
 async def ahelp(ctx, *, issue):
   """Ask for help from the bot owner"""
-  owner = bot.get_user(bot.owner_id)
+  owner = bot.get_user(int(config['ownerID']))
   embed = discord.Embed(title='{}:{} - {}'.format(str(ctx.author), ctx.author.id, ctx.guild.name), colour=masterColor, description=issue)
   await owner.send(embed=embed)
   await ctx.message.add_reaction('✅')
