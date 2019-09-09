@@ -125,7 +125,10 @@ async def announcement(ctx, title, *, message):
     guild = bot.get_guild(server[0])
     if server[1]:
       annCh = guild.get_channel(server[1])
-      await annCh.send(embed=embed)
+      try:
+        await annCh.send(embed=embed)
+      except Forbidden:
+        await guild.owner.send(content='I did not have access to your announcement channel: {}'.format(annCh.name), embed=embed)
     else:
       gowner = guild.owner
       await gowner.send(embed=embed)
