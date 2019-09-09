@@ -11,20 +11,21 @@ cursor = db.cursor()
 config = ConfigObj(infile = 'config.ini')
 masterColor = discord.Colour(0x30673a)
 
-game = discord.Activity(name='!help', type=discord.ActivityType.listening)
-bot = commands.Bot(description='True Experience', command_prefix='!', activity=game)
-
 try: ##Check if config.ini exist, if not, create a new file and kill the program
   f = open('config.ini')
   f.close()
 except IOError as e:
   f = open('config.ini', 'w+')
   f.close()
-  
-  print('config.ini not found, generating one now.')
+  print('config.ini not found, generating one now. Please fill it in.')
   config['token'] = ''
+  config['ownerID'] = ''
   config.write()
   sys.exit()
+
+game = discord.Activity(name='!help', type=discord.ActivityType.listening)
+bot = commands.Bot(description='True Experience', command_prefix='!', activity=game, owner_id=config['ownerID'])
+
 
 def ttCheck(ctx, indx):
   guild = ctx.guild
@@ -97,7 +98,7 @@ async def on_guild_join(guild):
   print(guild.id)
   print('----------')
   
-  embed = discord.Embed(title='Hello!', colour=masterColor, description='I have a few setup request to run at maximum efficiency. Anyone with Manage Server permission can use these commands.')
+  embed = discord.Embed(title='Hello!', colour=masterColor, description='I have a few setup requests to run at maximum efficiency. Anyone with Manage Server permission can use these commands.')
   embed.set_author(name=guild.name, icon_url=guild.icon_url)
   embed.add_field(name='Announcements', value='By using !setannounce or !sa in a channel, you will set that channel to be where I will post any bot related announcements, including but not limited to new features, scheduled downtimes, or known errors/workarounds. If you don\'t set this, then the server owner will get the announcements in their DMs.', inline=False)
   embed.add_field(name='Core Essential Experience', value='By using !setcore you can set your game\'s Core Essential Experience, which will be posted when using !core')
@@ -114,9 +115,9 @@ async def on_guild_join(guild):
     
 @bot.command()
 @commands.is_owner()
-async def announcement(ctx, title, message):
+async def announcement(ctx, title, *, message):
   """Send a bot wide announcement"""
-  embed = discord.Embed(title=title, colour=masterColor, description=message)
+  embed = discord.Embed(title='Announcement: {}'.format(title), colour=masterColor, description=message)
   cursor.execute( """SELECT id, announce FROM SERVERS""" )
   servers = cursor.fetchall()
   
@@ -128,6 +129,24 @@ async def announcement(ctx, title, message):
     else:
       gowner = guild.owner
       await gowner.send(embed=embed)
+      
+@bot.command()
+@commands.guild_only()
+async def ahelp(ctx, *, issue):
+  """Ask for help from the bot owner"""
+  owner = bot.get_user(bot.owner_id)
+  embed = discord.Embed(title='{}:{} - {}'.format(str(ctx.author), ctx.author.id, ctx.guild.name), colour=masterColor, description=issue)
+  await owner.send(embed=embed)
+  await ctx.message.add_reaction('✅')
+  
+@bot.command()
+@commands.is_owner()
+async def answer(ctx, mem: discord.Member, *, content):
+  """Answer an ahelp"""
+  embed = discord.Embed(title='Bot Owner\'s Reply', colour=masterColor, description=content)
+  embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar_url)
+  await mem.send(embed=embed)
+  await ctx.message.add_reaction('✅')
 
 @bot.command()
 @commands.guild_only()
@@ -142,7 +161,7 @@ async def core(ctx):
 @commands.guild_only()
 async def count(ctx):
   """Get Mention and Experience Count"""
-  cursor.execute("""SELECT count FROM SERVERS WHERE id = ?""", (ctx.guild.id,) )
+  cursor.execute("""SELECT exp FROM SERVERS WHERE id = ?""", (ctx.guild.id,) )
   count = cursor.fetchone()
   cursor.execute("""SELECT id, count FROM MENTION ORDER BY count DESC""")
   mcount = cursor.fetchall()
@@ -359,8 +378,8 @@ async def get(ctx, mem: discord.Member):
 @commands.has_permissions(ban_members=True)
 async def edit(ctx):
   """Administrative Edit Commands"""
-  owner = bot.get_user(180067685986467840)
-  if ctx.author is not owner:
+  owner = bot.get_user(bot.owner_id)
+  if ctx.author.id is not owner.id:
     embed = discord.Embed(title='Edit Command Invoked', colour=masterColor, description=str(ctx.message.content))
     embed.set_author(name=str(ctx.author), icon_url=ctx.author.avatar_url)
     await owner.send(embed=embed)
