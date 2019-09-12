@@ -5,6 +5,7 @@ import sys
 
 from discord.ext import commands
 from configobj import ConfigObj
+from random import randint
 
 db = sqlite3.connect('experience.db')
 cursor = db.cursor()
@@ -207,6 +208,24 @@ async def cout(ctx):
     await ctx.message.add_reaction('⛔')
     await ctx.send(embed=embed)
 
+@bot.command(aliases=['rc'])
+@commands.guild_only()
+async def reclock(ctx):
+  """Reset the two hour reminder counter be quickly clocking you in and out."""
+  id = ctx.author.id
+  cursor.execute("""SELECT * FROM TIMETABLE WHERE id = ? AND active = 1""", (id,))
+  clockedIn = cursor.fetchone()
+  if clockedIn:
+    cursor.execute("""UPDATE TIMETABLE SET cout = datetime('now', 'localtime'), active = 0 WHERE id = ? AND active = 1""", (id,))
+    cursor.execute("""INSERT INTO TIMETABLE(name, id, cin, active) VALUES(?, ?, datetime('now', 'localtime'), 1)""", (str(ctx.author), id))
+    db.commit()
+    await ctx.message.add_reaction('✅')
+  else:
+    embed = discord.Embed(title='This can only be ran if you are already clocked in', colour=masterColor)
+    embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
+    embed.set_footer(text='Please message Riley (rex8112#1200) if you forgot to clock in')
+    await ctx.message.add_reaction('⛔')
+    await ctx.send(embed=embed)
 @bot.group(aliases=['tt'])
 @commands.guild_only()
 async def timetable(ctx):
@@ -224,12 +243,10 @@ async def timetable(ctx):
     if ctx.author.avatar_url:
       embed.set_thumbnail(url=ctx.author.avatar_url)
     else:
-      embed.set_thumbnail(url='https://cdn.discordapp.com/embed/avatars/{}.png'.format(random.randint(0,4)))
 
     for stamp in stamps:
       indx = stamp[0]
-      name = stamp[1]
-      nid = stamp[2]
+      #name = stamp[1]
       cin = stamp[3]
       cout = stamp[4]
       act = stamp[5]
@@ -290,9 +307,8 @@ async def summary(ctx, begin, end):
       cursor.execute("""SELECT cin, cout FROM TIMETABLE WHERE id = ? AND active = 0 AND cin BETWEEN ? AND ? """, (id, begin, end))
       times = cursor.fetchall()
 
-      hrs = 0;
-      min = 0;
-      sec = 0;
+      hrs = 0
+      min = 0
 
       for time in times:
         cin = datetime.datetime.strptime(time[0], "%Y-%m-%d %H:%M:%S")
@@ -325,12 +341,10 @@ async def get(ctx, mem: discord.Member):
   if mem.avatar_url:
     embed.set_thumbnail(url=mem.avatar_url)
   else:
-    embed.set_thumbnail(url='https://cdn.discordapp.com/embed/avatars/{}.png'.format(random.randint(0,4)))
 
   for stamp in stamps:
     indx = stamp[0]
-    name = stamp[1]
-    nid = stamp[2]
+    #name = stamp[1]
     cin = stamp[3]
     cout = stamp[4]
     act = stamp[5]
