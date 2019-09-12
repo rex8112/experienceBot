@@ -226,6 +226,7 @@ async def reclock(ctx):
     embed.set_footer(text='Please message Riley (rex8112#1200) if you forgot to clock in')
     await ctx.message.add_reaction('⛔')
     await ctx.send(embed=embed)
+
 @bot.group(aliases=['tt'])
 @commands.guild_only()
 async def timetable(ctx):
@@ -243,10 +244,12 @@ async def timetable(ctx):
     if ctx.author.avatar_url:
       embed.set_thumbnail(url=ctx.author.avatar_url)
     else:
+      embed.set_thumbnail(url='https://cdn.discordapp.com/embed/avatars/{}.png'.format(randint(0,4)))
 
     for stamp in stamps:
       indx = stamp[0]
       #name = stamp[1]
+      #nid = stamp[2]
       cin = stamp[3]
       cout = stamp[4]
       act = stamp[5]
@@ -258,13 +261,10 @@ async def timetable(ctx):
         end = datetime.datetime.strptime(cout, "%Y-%m-%d %H:%M:%S")
         dur = end - begin
 
-        min = dur.days * 86400
+        min = dur.days * 1440
         sec = dur.seconds
 
-        min += sec // 60
-        sec = sec % 60
-        hrs = min // 60
-        min = min % 60
+        hrs, min, sec = timeConvert(min, sec)
 
         embed.add_field(name='__{}__: **{} - {}**'.format(indx, cin, cout), value='Duration: **{}** Hours, **{}** Minutes, **{}** Seconds'.format(hrs, min, sec), inline=False)
 
@@ -309,6 +309,7 @@ async def summary(ctx, begin, end):
 
       hrs = 0
       min = 0
+      sec = 0
 
       for time in times:
         cin = datetime.datetime.strptime(time[0], "%Y-%m-%d %H:%M:%S")
@@ -318,10 +319,7 @@ async def summary(ctx, begin, end):
         min += dur.days * 1440
         sec += dur.seconds
 
-      min += sec // 60
-      sec = sec % 60
-      hrs += min // 60
-      min = min % 60
+      hrs, min, sec = timeConvert(min, sec)
 
       embed.add_field(name='{.display_name}'.format(mem), value='**{}** Hours, **{}** Minutes, **{}** Seconds'.format(hrs, min, sec), inline=False)
 
@@ -341,10 +339,12 @@ async def get(ctx, mem: discord.Member):
   if mem.avatar_url:
     embed.set_thumbnail(url=mem.avatar_url)
   else:
+    embed.set_thumbnail(url='https://cdn.discordapp.com/embed/avatars/{}.png'.format(randint(0,4)))
 
   for stamp in stamps:
     indx = stamp[0]
     #name = stamp[1]
+    #nid = stamp[2]
     cin = stamp[3]
     cout = stamp[4]
     act = stamp[5]
@@ -355,14 +355,11 @@ async def get(ctx, mem: discord.Member):
       begin = datetime.datetime.strptime(cin, '%Y-%m-%d %H:%M:%S')
       end = datetime.datetime.strptime(cout, '%Y-%m-%d %H:%M:%S')
       dur = end - begin
-
-      min = dur.days * 86400
+      
+      min = dur.days * 1440
       sec = dur.seconds
 
-      min += sec // 60
-      sec = sec % 60
-      hrs = min // 60
-      min = min % 60
+      hrs, min, sec = timeConvert(min, sec)
 
       embed.add_field(name='{}: **{} - {}**'.format(indx, cin, cout), value='Duration: **{}** Hours, **{}** Minutes, **{}** Seconds'.format(hrs, min, sec), inline=False)
 
