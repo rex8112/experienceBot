@@ -2,6 +2,7 @@
 import sqlite3
 import datetime
 import sys
+import asyncio
 
 from discord.ext import commands
 from configobj import ConfigObj
@@ -35,6 +36,50 @@ def ttCheck(ctx, indx):
     return True
   else:
     return False
+    
+async def outCheck():
+  while True:
+    cursor.execute( """SELECT * FROM TIMETABLE WHERE active = 1""" )
+    entries = cursor.fetchall()
+    
+    for entry in entries:
+      indx = entry[0]
+      id = entry[2]
+      cin = entry[3]
+
+      begin = datetime.datetime.strptime(cin, "%Y-%m-%d %H:%M:%S")
+      now = datetime.datetime.now()
+      dur = now - begin
+
+      if dur.seconds > 3600 * 2:
+        usr = bot.get_user(id)
+
+        min = dur.days * 1440
+        sec = dur.seconds
+        hrs, min, sec = timeConvert(min, sec)
+
+        embed = discord.Embed(title='Did you forget to clock out?', colour=masterColor,
+                description='It seems you haven\'t clocked out in awhile\n**{}** Hours, **{}** Minutes, and **{}** Seconds\nTo be exact.'.format(hrs, min, sec))
+        embed.add_field(name='Is this intentional?', value='Per my settings, I inform everyone every **10** minutes (or immediately once I come back online) if their workblock has surpassed **2** hours.\n\
+              If you want to continue another two hours without being notified, please run the `!reclock` or `!rc` command in your discord')
+        embed.add_field(name='Not intentional?', value='Chances are, you just forgot to clock out, that\'s alright, just go clock out now\n\
+              Keep in mind this still clocks you out at the time of the command, if you need to have your clock out time fixed, simply let someone in your group with the `ban_members` \
+              permission know and they can fix your clock out with a quick `!tt edit update {} out {}`. Of course you will have to change the date/time accordingly.'.format(indx, datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+        embed.set_footer(text='This message will be deleted in 9 Minutes and 50 Seconds')
+        embed.set_author(name=usr.name, icon_url=usr.avatar_url)
+        
+        await usr.send(embed=embed, delete_after=590)
+    
+    await asyncio.sleep(600)
+
+def timeConvert(min, sec):
+
+  min += sec // 60
+  sec = sec % 60
+  hrs = min // 60
+  min = min % 60
+  
+  return hrs, min, sec
 
 @bot.event
 async def on_ready():
@@ -56,6 +101,7 @@ async def on_ready():
       cursor.execute( """INSERT INTO SERVERS(id) VALUES(?)""", (guild.id,) )
   
   db.commit()
+  bg_task = bot.loop.create_task(outCheck())
 
 @bot.event
 async def on_message(ctx):
