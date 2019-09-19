@@ -28,7 +28,6 @@ except IOError as e:
 game = discord.Activity(name='!help', type=discord.ActivityType.listening)
 bot = commands.Bot(description='True Experience', command_prefix='!', activity=game, owner_id=int(config['ownerID']))
 
-
 def ttCheck(ctx, indx):
   guild = ctx.guild
   cursor.execute( """SELECT id FROM TIMETABLE WHERE indx = ?""", (indx,) )
@@ -82,6 +81,7 @@ def timeConvert(min, sec):
   
   return hrs, min, sec
 
+bg_task = bot.loop.create_task(outCheck())
 @bot.event
 async def on_ready():
   print("Logged in as")
@@ -102,7 +102,6 @@ async def on_ready():
       cursor.execute( """INSERT INTO SERVERS(id) VALUES(?)""", (guild.id,) )
   
   db.commit()
-  bg_task = bot.loop.create_task(outCheck())
 
 @bot.event
 async def on_message(ctx):
