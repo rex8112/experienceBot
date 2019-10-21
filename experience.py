@@ -38,7 +38,12 @@ def ttCheck(ctx, indx):
     return False
     
 async def outCheck():
+  cnt = 0
   while True:
+    cnt += 1
+    print('Waiting to Check: {}'.format(cnt))
+    await asyncio.sleep(600)
+
     cursor.execute( """SELECT * FROM TIMETABLE WHERE active = 1""" )
     entries = cursor.fetchall()
     
@@ -70,7 +75,6 @@ async def outCheck():
         
         await usr.send(embed=embed, delete_after=590)
     
-    await asyncio.sleep(600)
 
 def timeConvert(min, sec):
 
@@ -173,7 +177,7 @@ async def announcement(ctx, title, *, message):
       annCh = guild.get_channel(server[1])
       try:
         await annCh.send(embed=embed)
-      except Forbidden:
+      except discord.Forbidden:
         await guild.owner.send(content='I did not have access to your announcement channel: {}'.format(annCh.name), embed=embed)
     else:
       gowner = guild.owner
@@ -483,7 +487,7 @@ async def update(ctx, indx, pos: str, *, timestamp):
   You must use the whole format: YYYY-MM-DD HH:MM:SS"""
   if ttCheck(ctx, indx):
     try:
-      time = datetime.datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S')
+      _ = datetime.datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S')
       
       if pos == 'in':
         cursor.execute( """UPDATE TIMETABLE SET cin = ? WHERE indx = ?""", (timestamp, indx))
